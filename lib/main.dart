@@ -5,7 +5,8 @@ import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
+import 'dart:async' as async;
+
 
 void main() {
   runApp(const MyApp());
@@ -20,10 +21,30 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class FlameDemo extends StatelessWidget {
-  FlameDemo({super.key});
+class FlameDemo extends StatefulWidget {
+  @override
+  State<FlameDemo> createState() => _FlameDemo();
 
+}
+
+
+class _FlameDemo extends State<FlameDemo> {
   final game = GameManager();
+  int count = Ballet.count;
+  int rss = 0;
+
+  @override
+  void initState() {
+    super.initState();
+   async.Timer.periodic(const Duration(seconds: 1), updateMetrics);
+  }
+
+  void updateMetrics(async.Timer timer) {
+    setState(() {
+      count =  Ballet.count;
+      rss = ProcessInfo.currentRss;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,10 +55,11 @@ class FlameDemo extends StatelessWidget {
             backgroundColor: Colors.blue,
             title: Column(
               children: [
-                const Text('Flame Demo'),
+                // const Text('Flame Demo'),
                 // スマホの時だけパフォーマンス表示が可能
                 // PerformanceOverlay.allEnabled(),
-                Text('ProcessInfo.Rss ${ProcessInfo.currentRss}'),
+                Text('ProcessInfo.Rss ${rss}'),
+                Text('Ballet count ${count}'),
                 // const Text()
               ],
             )),
@@ -82,16 +104,11 @@ class Enemy extends SpriteComponent with HasGameRef {
   void update(double dt) {
     totaldt += dt;
     lifetime += dt;
-    if (totaldt > 3.0) {
-      totaldt -= 3.0;
-      // gameRef.add(Ballet(position:position, direction: 0));
-      // gameRef.add(Ballet(position:position, direction: 0.5 * pi));
-      // gameRef.add(Ballet(position:position, direction: 1 * pi ));
-      // gameRef.add(Ballet(position:position, direction: 1.5  * pi));
-    }
-
-    if (lifetime > 5) {
-      removeFromParent();
+    if (totaldt > 0.2) {
+      totaldt -= 0.2;
+      for(int i =0; i < 64;i++) {
+        gameRef.add(Ballet(position:position, direction: i * 0.156125 * pi));
+      }
     }
   }
 }
@@ -101,7 +118,7 @@ class Ballet extends SpriteComponent with HasGameRef {
   double totaldt = 0;
   double lifetime = 0;
   late double direction;
-  double spd = 20.0;
+  double spd = 4.0;
 
   Ballet({required position, required this.direction})
       : super(size: Vector2.all(16.0)) {
@@ -126,17 +143,21 @@ class Ballet extends SpriteComponent with HasGameRef {
   void update(double dt) {
     totaldt += dt;
     lifetime += dt;
-    if (totaldt > 1.0) {
-      totaldt -= 1.0;
+    // if (totaldt > 0.3) {
+    //   totaldt -= 0.3;
       final move = MoveToEffect(forward(), EffectController(duration: 0));
       add(move);
-    }
-    if (lifetime > 10) {
-      remove(this);
+    // }
+    if (lifetime > 2) {
+      removeFromParent();
     }
   }
   Vector2 forward() {
     return Vector2(
         position.x + spd * sin(direction), y + spd * -cos(direction));
+  }
+  @override
+  void onRemove() {
+    Ballet.count--;
   }
 }
